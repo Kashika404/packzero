@@ -1,0 +1,57 @@
+// backend/prisma/schema.prisma --- FINAL RECOMMENDED VERSION
+
+// This generator tells Prisma to create a JavaScript client for our Node.js app
+generator client {
+  provider = "prisma-client-js"
+}
+
+// This defines our connection to the PostgreSQL database using the URL from our .env file
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// The User model for when we build a login system
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  password  String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  
+}
+
+// The Product model, representing items you sell
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  length      Float
+  width       Float
+  height      Float
+  weight      Float
+  isFragile   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// The Packaging model, representing your shipping materials
+model Packaging {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   // e.g., "BOX" or "MAILER"
+  length      Float
+  width       Float
+  height      Float
+  maxWeight   Float
+   cost        Float    @default(0) 
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// The ProtectiveFiller model, for things like bubble wrap
+model ProtectiveFiller {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
