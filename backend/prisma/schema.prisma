@@ -19,6 +19,10 @@ model User {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   
+  products   Product[]
+  packaging  Packaging[]
+  fillers    ProtectiveFiller[]
+   shipments  Shipment[]
 }
 
 // The Product model, representing items you sell
@@ -32,6 +36,11 @@ model Product {
   isFragile   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+   shipments Shipment[]
 }
 
 // The Packaging model, representing your shipping materials
@@ -44,8 +53,14 @@ model Packaging {
   height      Float
   maxWeight   Float
    cost        Float    @default(0) 
+    packagingWeight Float @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  shipments Shipment[]
 }
 
 // The ProtectiveFiller model, for things like bubble wrap
@@ -54,4 +69,27 @@ model ProtectiveFiller {
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+}
+
+model Shipment {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+
+  volumeSaved Float @default(0)
+  costSaved   Float @default(0)
+  co2Saved    Float @default(0)
+
+  // Relation to the User who made the shipment
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  // Relation to the specific packaging that was used
+   recommendedPackaging   Packaging? @relation(fields: [recommendedPackagingId], references: [id], onDelete: SetNull)
+  recommendedPackagingId String? 
+
+  // Many-to-many relation for all products included in the shipment
+  products Product[]
 }

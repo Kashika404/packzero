@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+
 import Papa from 'papaparse';
 import ProductForm from './components/ProductForm';
 import ProductList from './components/ProductList';
@@ -10,6 +10,8 @@ import FillerList from './components/FillerList';
 import EditProductModal from './components/EditProductModal';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useAuth } from './context/AuthContext';
+import { Link } from 'react-router-dom'; 
 
 function App() {
   const [products, setProducts] = useState([]);
@@ -18,16 +20,19 @@ function App() {
   const [cart, setCart] = useState([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
+    const { user, logout, api } = useAuth();
 
   const API_URL = 'http://localhost:8888/api';
 
-  // More efficient data fetching
+ 
   const fetchAllData = async () => {
     try {
       const [productsRes, packagingRes, fillersRes] = await Promise.all([
-        axios.get(`${API_URL}/products`),
-        axios.get(`${API_URL}/packaging`),
-        axios.get(`${API_URL}/fillers`),
+      
+    
+        api.get('/products'),
+        api.get('/packaging'),
+        api.get('/fillers'),
       ]);
       setProducts(productsRes.data);
       setPackagingItems(packagingRes.data);
@@ -38,31 +43,46 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    fetchAllData();
-  }, []);
 
-  const handleProductDelete = async (productId) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
-      await axios.delete(`${API_URL}/products/${productId}`);
+useEffect(() => {
+  
+  if (api) {
+    fetchAllData();
+  }
+}, [api]);
+
+   const handleProductDelete = async (productId) => {
+    
+    try {
+      await api.delete(`/products/${productId}`);
       toast.success("Product deleted!");
       fetchAllData();
+    } catch (error) {
+      toast.error("Failed to delete product.");
     }
   };
+
+ 
 
   const handlePackagingDelete = async (packagingId) => {
-    if (window.confirm('Are you sure you want to delete this packaging?')) {
-      await axios.delete(`${API_URL}/packaging/${packagingId}`);
+
+    try {
+      await api.delete(`/packaging/${packagingId}`);
       toast.success("Packaging deleted!");
       fetchAllData();
+    } catch (error) {
+      toast.error("Failed to delete packaging.");
     }
   };
 
-  const handleFillerDelete = async (fillerId) => {
-    if (window.confirm('Are you sure you want to delete this filler?')) {
-      await axios.delete(`${API_URL}/fillers/${fillerId}`);
+   const handleFillerDelete = async (fillerId) => {
+
+    try {
+      await api.delete(`/fillers/${fillerId}`);
       toast.success("Filler deleted!");
       fetchAllData();
+    } catch (error) {
+      toast.error("Failed to delete filler.");
     }
   };
 
@@ -70,6 +90,16 @@ function App() {
     setProductToEdit(product);
     setIsEditModalOpen(true);
   };
+  const handleProductCreate = async (productData) => {
+    try {
+      await api.post('/products', productData);
+      toast.success('Product created successfully!');
+      fetchAllData();
+    } catch (error) {
+      toast.error(`Failed to create product: ${error.response?.data?.message || 'Error'}`);
+    }
+  };
+  
 
   const handleCloseEditModal = () => {
     setIsEditModalOpen(false);
@@ -94,7 +124,7 @@ function App() {
     }
     try {
       const productIds = cart.map(p => p.id);
-      const response = await axios.post(`${API_URL}/recommend`, { productIds });
+      const response = await api.post(`/recommend`, { productIds });
       const { recommendedPackage, recommendedFillers } = response.data;
       
       let recommendationMessage = `Use: "${recommendedPackage.name}" (${recommendedPackage.type})`;
@@ -120,7 +150,7 @@ function App() {
       header: true,
       skipEmptyLines: true,
       complete: async (results) => {
-        // Convert string values to correct types (float/int)
+     
         const processedData = results.data.map(row => ({
           ...row,
           length: parseFloat(row.length),
@@ -131,9 +161,9 @@ function App() {
         }));
 
         try {
-          const response = await axios.post(`${API_URL}/packaging/bulk`, processedData);
+          const response = await api.post(`/packaging/bulk`, processedData);
           toast.success(`Successfully imported ${response.data.count} packaging items!`);
-          fetchAllData(); // Refresh the list
+          fetchAllData();
         } catch (error) {
           const errorMessage = error.response?.data?.message || "An error occurred during import.";
           toast.error(`Import failed: ${errorMessage}`);
@@ -148,7 +178,7 @@ function App() {
   };
 
 
-  // --- ADD THIS NEW FUNCTION ---
+
 const handleFillerCsvImport = (file) => {
   if (!file) {
     toast.error("No file selected.");
@@ -159,13 +189,13 @@ const handleFillerCsvImport = (file) => {
     header: true,
     skipEmptyLines: true,
     complete: async (results) => {
-      // No data conversion is needed since 'name' is already a string
+     
       const processedData = results.data;
 
       try {
-        const response = await axios.post(`${API_URL}/fillers/bulk`, processedData);
+        const response = await api.post(`/fillers/bulk`, processedData);
         toast.success(`Successfully imported ${response.data.count} filler items!`);
-        fetchAllData(); // Refresh the list
+        fetchAllData(); 
       } catch (error) {
         const errorMessage = error.response?.data?.message || "An error occurred during import.";
         toast.error(`Import failed: ${errorMessage}`);
@@ -183,9 +213,19 @@ const handleFillerCsvImport = (file) => {
   return (
     <div className="bg-gray-50 min-h-screen font-sans">
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop={false} closeOnClick />
-      <header className="bg-white shadow-sm">
+      {/* <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           <h1 className="text-3xl font-bold leading-tight text-gray-900">PackZero Dashboard</h1>
+        </div>
+      </header> */}
+
+      <header className="bg-white shadow-sm">
+        {/* 2. MODIFY THE HEADER */}
+        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+          <h1 className="text-3xl font-bold leading-tight text-gray-900">PackZero Dashboard</h1>
+          <nav>
+            <Link to="/analytics" className="text-blue-600 font-semibold hover:underline">View Analytics</Link>
+          </nav>
         </div>
       </header>
 
@@ -195,7 +235,7 @@ const handleFillerCsvImport = (file) => {
           <div className="bg-white p-4 rounded-lg">
             <strong className="block mb-2 text-gray-800">Cart Items:</strong>
             {cart.length > 0 ? (
-              // <ul className="list-disc list-inside mb-4">{cart.map((item, i) => <li key={i}>{item.name} {item.isFragile && <span className="text-red-500 font-semibold">(Fragile)</span>}</li>)}</ul>
+           
                  <ul className="space-y-2 mb-4">
                 {cart.map((item, index) => (
                   <li key={index} className="flex justify-between items-center bg-gray-50 p-2 rounded-md animate-fade-in">
@@ -228,7 +268,8 @@ const handleFillerCsvImport = (file) => {
               <ProductList products={products} onDelete={handleProductDelete} onAddToCart={addToCart} onEdit={handleOpenEditModal} />
               <hr className="my-6"/>
               <h3 className="text-xl font-semibold mb-3 text-gray-700">Add a New Product</h3>
-              <ProductForm onProductCreated={fetchAllData} />
+         
+              <ProductForm onProductSubmit={handleProductCreate} />
             </div>
           </div>
           <div className="lg:col-span-1 space-y-6">
@@ -247,7 +288,7 @@ const handleFillerCsvImport = (file) => {
                   type="file"
                   id="csv-import"
                   accept=".csv"
-                  className="hidden" // Hide the default ugly input
+                  className="hidden" 
                   onChange={(e) => handlePackagingCsvImport(e.target.files[0])}
                 />
                 <p className="text-xs text-gray-500 mt-2 text-center">
@@ -258,13 +299,7 @@ const handleFillerCsvImport = (file) => {
               <h3 className="text-xl font-semibold mb-3 text-gray-700">Add New Packaging</h3>
               <PackagingForm onPackagingCreated={fetchAllData} />
             </div>
-            {/* <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-2xl font-semibold mb-4 text-gray-800">Protective Fillers</h2>
-              <FillerList items={fillers} onDelete={handleFillerDelete} />
-              <hr className="my-6"/>
-              <h3 className="text-xl font-semibold mb-3 text-gray-700">Add New Filler</h3>
-              <FillerForm onFillerCreated={fetchAllData} />
-            </div> */}
+           
 
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h2 className="text-2xl font-semibold mb-4 text-gray-800">Protective Fillers</h2>
@@ -301,3 +336,6 @@ const handleFillerCsvImport = (file) => {
 }
 
 export default App;
+
+
+

@@ -1,98 +1,62 @@
-// import React, { useState } from 'react';
-// import axios from 'axios';
-// import { ToastContainer, toast } from 'react-toastify';
-// import 'react-toastify/dist/ReactToastify.css';
-// function PackagingForm({ onPackagingCreated }) {
-//   const [name, setName] = useState('');
-//   const [type, setType] = useState('BOX');
-//   const [length, setLength] = useState('');
-//   const [width, setWidth] = useState('');
-//   const [height, setHeight] = useState('');
-//   const [maxWeight, setMaxWeight] = useState('');
-//   const [cost, setCost] = useState(''); 
-
-//   const handleSubmit = async (event) => {
-//     event.preventDefault();
-//     const packagingData = {
-//       name,
-//       type,
-//       length: parseFloat(length),
-//       width: parseFloat(width),
-//       height: parseFloat(height),
-//       maxWeight: parseFloat(maxWeight),
-//        cost: parseFloat(cost),
-//     };
-
-
-// try {
-//       await axios.post('http://localhost:8888/api/packaging', packagingData);
-//       toast.success('Packaging created successfully!');
-//       // Clear form
-//       setName(''); setType('BOX'); setLength(''); setWidth(''); setHeight(''); setMaxWeight(''); setCost('');
-//       onPackagingCreated();
-//     } catch (error) {
-//       toast.error('Failed to create packaging.');
-//     }
-//   };
-
-//   return (
-//     <form onSubmit={handleSubmit}>
-//       <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Packaging Name" required />
-//       <select value={type} onChange={(e) => setType(e.target.value)} required>
-//         <option value="BOX">Box</option>
-//         <option value="MAILER">Mailer</option>
-//       </select>
-//       {/* Ensure EVERY input that needs a value has the 'required' attribute */}
-//       <input type="number" value={length} onChange={(e) => setLength(e.target.value)} placeholder="Length (cm)" required />
-//       <input type="number" value={width} onChange={(e) => setWidth(e.target.value)} placeholder="Width (cm)" required />
-//       <input type="number" value={height} onChange={(e) => setHeight(e.target.value)} placeholder="Height (cm)" required />
-//       <input type="number" value={maxWeight} onChange={(e) => setMaxWeight(e.target.value)} placeholder="Max Weight (kg)" required />
-//       <input type="number" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="Cost (e.g., 10.50)" required />
-//       <button type="submit">Save Packaging</button>
-//     </form>
-//   );
-// }
-
-// export default PackagingForm;
-
-
-
-
 import React, { useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useAuth } from '../context/AuthContext'
 
 function PackagingForm({ onPackagingCreated }) {
-  const [name, setName] = useState(''); //
-  const [type, setType] = useState('BOX'); //
-  const [length, setLength] = useState(''); //
-  const [width, setWidth] = useState(''); //
-  const [height, setHeight] = useState(''); //
-  const [maxWeight, setMaxWeight] = useState(''); //
-  const [cost, setCost] = useState(''); //
+    const { api } = useAuth(); 
+  const [name, setName] = useState(''); 
+  const [type, setType] = useState('BOX'); 
+  const [length, setLength] = useState(''); 
+  const [width, setWidth] = useState(''); 
+  const [height, setHeight] = useState(''); 
+  const [maxWeight, setMaxWeight] = useState(''); 
+  const [cost, setCost] = useState(''); 
+    const [packagingWeight, setPackagingWeight] = useState(''); 
 
-  const handleSubmit = async (event) => { //
-    event.preventDefault(); //
-    const packagingData = { //
-      name, //
-      type, //
-      length: parseFloat(length), //
-      width: parseFloat(width), //
-      height: parseFloat(height), //
-      maxWeight: parseFloat(maxWeight), //
-      cost: parseFloat(cost), //
+  const handleSubmit = async (event) => { 
+    event.preventDefault(); 
+    const packagingData = { 
+      name, 
+      type, 
+      length: parseFloat(length), 
+      width: parseFloat(width), 
+      height: parseFloat(height), 
+      maxWeight: parseFloat(maxWeight),
+      cost: parseFloat(cost), 
+      packagingWeight: parseFloat(packagingWeight), 
     };
 
 
+   
+    
+
     try {
-      await axios.post('http://localhost:8888/api/packaging', packagingData); //
-      toast.success('Packaging created successfully!'); //
-      // Clear form
-      setName(''); setType('BOX'); setLength(''); setWidth(''); setHeight(''); setMaxWeight(''); setCost(''); //
-      onPackagingCreated(); //
+      await api.post('/packaging', packagingData);
+      toast.success('Packaging created successfully!');
+      setName(''); setType('BOX'); setLength(''); setWidth(''); setHeight(''); setMaxWeight(''); setCost('');setPackagingWeight(''); 
+      onPackagingCreated();
     } catch (error) {
-      toast.error('Failed to create packaging.'); //
+      // --- START: ENHANCED ERROR LOGGING ---
+      console.error("Detailed error creating packaging:", error);
+
+      if (error.response) {
+        // The request was made and the server responded with an error (e.g., 400, 500)
+        console.error("Backend Response Data:", error.response.data);
+        const serverMessage = error.response.data?.message || 'An unknown server error occurred.';
+        const details = error.response.data?.details ? JSON.stringify(error.response.data.details) : '';
+        toast.error(`Error: ${serverMessage} ${details}`);
+      } else if (error.request) {
+        // The request was made but no response was received (e.g., network error, wrong port)
+        console.error("No response received from server. Is the backend running on port 8890?", error.request);
+        toast.error('Failed to connect to the server. Please ensure the backend is running.');
+      } else {
+        // Something happened in setting up the request
+        console.error('Error setting up the request:', error.message);
+        toast.error('A frontend error occurred before the request was sent.');
+      }
+      // --- END: ENHANCED ERROR LOGGING ---
     }
   };
 
@@ -162,6 +126,15 @@ function PackagingForm({ onPackagingCreated }) {
           required
           className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
         />
+        <input
+  type="number"
+  step="any"
+  value={packagingWeight} // You'll need to add a state for this: const [packagingWeight, setPackagingWeight] = useState('');
+  onChange={(e) => setPackagingWeight(e.target.value)}
+  placeholder="Packaging Weight (kg)"
+  required
+  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
+/>
       </div>
       
       <button
@@ -175,3 +148,5 @@ function PackagingForm({ onPackagingCreated }) {
 }
 
 export default PackagingForm;
+
+

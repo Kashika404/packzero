@@ -8,6 +8,7 @@ const createPackagingSchema = z.object({
   width: z.number().positive(),
   height: z.number().positive(),
   maxWeight: z.number().positive(),
+  cost: z.number().positive(), 
 });
 
 module.exports = { createPackagingSchema };
