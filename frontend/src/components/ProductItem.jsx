@@ -1,28 +1,4 @@
 
-// import React from 'react';
-
-
-// function ProductItem({ product, onDelete, onAddToCart, onEdit }) {
-//   return (
-//     <div className="product-item">
-//       <div>
-//         <strong>{product.name}</strong> {product.isFragile && '(Fragile)'}
-//         <p>Dimensions: {product.length}x{product.width}x{product.height} cm</p>
-//         <p>Weight: {product.weight} kg</p>
-//       </div>
-//       <div className="product-actions">
-
-//         <button className="edit-btn" onClick={() => onEdit(product)}>Edit</button>
-//         <button className="cart-btn" onClick={() => onAddToCart(product)}>Add to Cart</button>
-//         <button className="delete-btn" onClick={() => onDelete(product.id)}>Delete</button>
-//       </div>
-//     </div>
-//   );
-// }
-
-
-
-// export default ProductItem;
 
 
 

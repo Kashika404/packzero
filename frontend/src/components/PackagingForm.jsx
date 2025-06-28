@@ -27,11 +27,7 @@ function PackagingForm({ onPackagingCreated }) {
       cost: parseFloat(cost), 
       packagingWeight: parseFloat(packagingWeight), 
     };
-
-
-   
     
-
     try {
       await api.post('/packaging', packagingData);
       toast.success('Packaging created successfully!');

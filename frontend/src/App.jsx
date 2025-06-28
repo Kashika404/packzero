@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-
+import AddressForm from './components/AddressForm'; 
 import Papa from 'papaparse';
 import ProductForm from './components/ProductForm';
 import ProductList from './components/ProductList';
@@ -11,6 +11,7 @@ import EditProductModal from './components/EditProductModal';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useAuth } from './context/AuthContext';
+import RecommendationModal from './components/RecommendationModal';
 import { Link } from 'react-router-dom'; 
 
 function App() {
@@ -20,7 +21,12 @@ function App() {
   const [cart, setCart] = useState([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
-    const { user, logout, api } = useAuth();
+  const { user, logout, api } = useAuth();
+  const [recommendationResult, setRecommendationResult] = useState(null);
+  const [isRecommendationModalOpen, setIsRecommendationModalOpen] = useState(false);
+
+   const [fromAddress, setFromAddress] = useState({ name: "Shawn Ippotle", street1: "215 Clayton St.", city: "San Francisco", state: "CA", zip: "94117", country: "US", email: "shippotest.from@goshippo.com" });
+  const [toAddress, setToAddress] = useState({ name: "Mr Hippo", street1: "965 Mission St #572", city: "San Francisco", state: "CA", zip: "94103", country: "US", email: "shippotest.to@goshippo.com" });
 
   const API_URL = 'http://localhost:8888/api';
 
@@ -117,25 +123,29 @@ useEffect(() => {
     toast.error(`Removed "${itemNameToRemove}" from cart`);
   };
 
+
+
   const getRecommendation = async () => {
+
     if (cart.length === 0) {
       toast.warn("Please add items to the cart first.");
       return;
     }
     try {
+      // The API call is the same
       const productIds = cart.map(p => p.id);
       const response = await api.post(`/recommend`, { productIds });
-      const { recommendedPackage, recommendedFillers } = response.data;
       
-      let recommendationMessage = `Use: "${recommendedPackage.name}" (${recommendedPackage.type})`;
-      if (recommendedFillers?.length > 0) {
-        const fillerNames = recommendedFillers.map(f => f.name).join(', ');
-        recommendationMessage += ` with ${fillerNames}`;
-      }
+      setRecommendationResult({ ...response.data, cart: [...cart] });
       
-      toast.success(<div><p className="font-bold">Recommendation:</p><p>{recommendationMessage}</p></div>, { autoClose: 10000 });
+     
+      setIsRecommendationModalOpen(true);
+      
+      
       setCart([]);
+      
     } catch (error) {
+      
       toast.error(`Could not get recommendation: ${error.response?.data?.message || "An error occurred."}`);
     }
   };
@@ -213,14 +223,10 @@ const handleFillerCsvImport = (file) => {
   return (
     <div className="bg-gray-50 min-h-screen font-sans">
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop={false} closeOnClick />
-      {/* <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold leading-tight text-gray-900">PackZero Dashboard</h1>
-        </div>
-      </header> */}
+     
 
       <header className="bg-white shadow-sm">
-        {/* 2. MODIFY THE HEADER */}
+        
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <h1 className="text-3xl font-bold leading-tight text-gray-900">PackZero Dashboard</h1>
           <nav>
@@ -259,6 +265,17 @@ const handleFillerCsvImport = (file) => {
               Get Best Packaging
             </button>
           </div>
+        </section>
+
+        <section className="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 className="text-2xl font-semibold mb-4 text-gray-800">Shipping Details</h2>
+            <p className="text-sm text-gray-500 mb-4">Enter sender and recipient addresses to get live shipping rates.</p>
+            <AddressForm 
+                fromAddress={fromAddress}
+                setFromAddress={setFromAddress}
+                toAddress={toAddress}
+                setToAddress={setToAddress}
+            />
         </section>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -331,6 +348,18 @@ const handleFillerCsvImport = (file) => {
       </main>
 
       <EditProductModal isOpen={isEditModalOpen} onClose={handleCloseEditModal} product={productToEdit} onProductUpdated={fetchAllData} />
+       {/* <RecommendationModal 
+        isOpen={isRecommendationModalOpen}
+        onClose={() => setIsRecommendationModalOpen(false)}
+        results={recommendationResult}
+      /> */}
+       <RecommendationModal 
+        isOpen={isRecommendationModalOpen}
+        onClose={() => setIsRecommendationModalOpen(false)}
+        results={recommendationResult}
+        fromAddress={fromAddress}
+        toAddress={toAddress}
+      />
     </div>
   );
 }
