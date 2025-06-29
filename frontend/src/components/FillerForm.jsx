@@ -11,16 +11,9 @@ function FillerForm({ onFillerCreated }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    // try {
-    //   await axios.post('http://localhost:8888/api/fillers', { name });
-    //   toast.success('Filler created successfully!');
-    //   setName('');
-    //   onFillerCreated();
-    // } catch (error) {
-    //   toast.error('Failed to create filler.');
-    // }
+   
     try {
-      // 3. Use the correct 'api' instance
+      
       await api.post('/fillers', { name });
       toast.success('Filler created successfully!');
       setName('');

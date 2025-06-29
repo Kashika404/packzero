@@ -11,13 +11,16 @@
     "tailwind:init": "tailwindcss init -p"
   },
   "dependencies": {
+    "@react-three/drei": "^10.3.0",
+    "@react-three/fiber": "^9.1.4",
     "axios": "^1.10.0",
     "papaparse": "^5.5.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.2",
     "react-toastify": "^11.0.5",
-    "recharts": "^3.0.0"
+    "recharts": "^3.0.0",
+    "three": "^0.177.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",

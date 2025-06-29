@@ -1,4 +1,4 @@
-// backend/src/schemas/packaging.schema.js
+
 const { z } = require('zod');
 
 const createPackagingSchema = z.object({
@@ -9,7 +9,8 @@ const createPackagingSchema = z.object({
   height: z.number().positive(),
   maxWeight: z.number().positive(),
   cost: z.number().positive(), 
-   packagingWeight: z.number().positive()
+   packagingWeight: z.number().positive(),
+   quantity: z.number().int().min(0),
 });
 
 module.exports = { createPackagingSchema };

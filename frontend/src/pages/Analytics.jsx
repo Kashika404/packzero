@@ -46,7 +46,7 @@ function Analytics() {
       </header>
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {/* KPI Cards */}
+       
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white p-6 rounded-lg shadow-md text-center">
             <h3 className="text-lg font-semibold text-gray-600">Total Volume Saved</h3>
@@ -62,7 +62,7 @@ function Analytics() {
           </div>
         </div>
 
-        {/* Chart */}
+      
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h2 className="text-2xl font-semibold mb-4 text-gray-800">Savings Summary</h2>
           <div style={{ width: '100%', height: 400 }}>

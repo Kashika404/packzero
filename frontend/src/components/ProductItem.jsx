@@ -1,17 +1,17 @@
-
-
-
-
-
 import React from 'react';
 
 function ProductItem({ product, onDelete, onAddToCart, onEdit }) {
+  const stockLevel = product.quantity;
+  const isLowStock = stockLevel <= 5;
   return (
     <div className="border border-gray-200 rounded-lg p-4 flex justify-between items-center transition-shadow hover:shadow-md">
       <div>
         <strong className="text-lg text-gray-800">{product.name}</strong> 
         {product.isFragile && <span className="ml-2 text-xs font-semibold bg-red-100 text-red-800 px-2 py-1 rounded-full">Fragile</span>}
         <p className="text-sm text-gray-600">Dimensions: {product.length}x{product.width}x{product.height} cm | Weight: {product.weight} kg</p>
+        <p className={`text-sm font-bold ${isLowStock ? 'text-red-500' : 'text-gray-700'}`}>
+          Stock: {stockLevel} {isLowStock && '(Low Stock!)'}
+        </p>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
         <button className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 text-sm font-semibold transition-colors" onClick={() => onAddToCart(product)}>Add to Cart</button>

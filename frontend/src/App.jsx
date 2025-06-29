@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useMemo  } from 'react';
 import AddressForm from './components/AddressForm'; 
 import Papa from 'papaparse';
 import ProductForm from './components/ProductForm';
@@ -13,6 +13,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useAuth } from './context/AuthContext';
 import RecommendationModal from './components/RecommendationModal';
 import { Link } from 'react-router-dom'; 
+import FilterControls from './components/FilterControls';
 
 function App() {
   const [products, setProducts] = useState([]);
@@ -25,10 +26,41 @@ function App() {
   const [recommendationResult, setRecommendationResult] = useState(null);
   const [isRecommendationModalOpen, setIsRecommendationModalOpen] = useState(false);
 
+   const [productSearchTerm, setProductSearchTerm] = useState('');
+  const [packagingSearchTerm, setPackagingSearchTerm] = useState('');
+  const [productFilter, setProductFilter] = useState('all'); 
+  const [packagingFilter, setPackagingFilter] = useState('all'); 
+
    const [fromAddress, setFromAddress] = useState({ name: "Shawn Ippotle", street1: "215 Clayton St.", city: "San Francisco", state: "CA", zip: "94117", country: "US", email: "shippotest.from@goshippo.com" });
   const [toAddress, setToAddress] = useState({ name: "Mr Hippo", street1: "965 Mission St #572", city: "San Francisco", state: "CA", zip: "94103", country: "US", email: "shippotest.to@goshippo.com" });
 
   const API_URL = 'http://localhost:8888/api';
+
+
+
+
+  const filteredProducts = useMemo(() => {
+    return products
+        .filter(product => {
+            if (productFilter === 'fragile') return product.isFragile;
+            if (productFilter === 'not_fragile') return !product.isFragile;
+            return true; 
+        })
+        .filter(product =>
+            product.name.toLowerCase().includes(productSearchTerm.toLowerCase())
+        );
+}, [products, productSearchTerm, productFilter]);
+
+const filteredPackagingItems = useMemo(() => {
+    return packagingItems
+        .filter(item => {
+            if (packagingFilter === 'all') return true;
+            return item.type === packagingFilter;
+        })
+        .filter(item =>
+            item.name.toLowerCase().includes(packagingSearchTerm.toLowerCase())
+        );
+}, [packagingItems, packagingSearchTerm, packagingFilter]);
 
  
   const fetchAllData = async () => {
@@ -132,7 +164,7 @@ useEffect(() => {
       return;
     }
     try {
-      // The API call is the same
+     
       const productIds = cart.map(p => p.id);
       const response = await api.post(`/recommend`, { productIds });
       
@@ -229,9 +261,17 @@ const handleFillerCsvImport = (file) => {
         
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
           <h1 className="text-3xl font-bold leading-tight text-gray-900">PackZero Dashboard</h1>
-          <nav>
-            <Link to="/analytics" className="text-blue-600 font-semibold hover:underline">View Analytics</Link>
-          </nav>
+         
+          <div className="flex items-center gap-6">
+             
+            <Link to="/settings" className="text-gray-600 font-semibold hover:text-blue-600">
+                {user?.email}
+            </Link>
+            <nav className="space-x-4">
+                <Link to="/shipments" className="text-blue-600 font-semibold hover:underline">Shipment History</Link>
+                <Link to="/analytics" className="text-blue-600 font-semibold hover:underline">View Analytics</Link>
+            </nav>
+        </div>
         </div>
       </header>
 
@@ -282,7 +322,19 @@ const handleFillerCsvImport = (file) => {
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h2 className="text-2xl font-semibold mb-4 text-gray-800">Product Inventory</h2>
-              <ProductList products={products} onDelete={handleProductDelete} onAddToCart={addToCart} onEdit={handleOpenEditModal} />
+               <FilterControls
+            searchTerm={productSearchTerm}
+            setSearchTerm={setProductSearchTerm}
+            filter={productFilter}
+            setFilter={setProductFilter}
+            filterOptions={[
+              { value: 'all', label: 'All' },
+              { value: 'fragile', label: 'Fragile' },
+              { value: 'not_fragile', label: 'Not Fragile' }
+            ]}
+            searchPlaceholder="Search products by name..."
+          />
+              <ProductList products={filteredProducts} onDelete={handleProductDelete} onAddToCart={addToCart} onEdit={handleOpenEditModal} />
               <hr className="my-6"/>
               <h3 className="text-xl font-semibold mb-3 text-gray-700">Add a New Product</h3>
          
@@ -291,8 +343,23 @@ const handleFillerCsvImport = (file) => {
           </div>
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-white p-6 rounded-lg shadow-md">
+
               <h2 className="text-2xl font-semibold mb-4 text-gray-800">Packaging Inventory</h2>
-              <PackagingList items={packagingItems} onDelete={handlePackagingDelete} />
+
+              <FilterControls
+            searchTerm={packagingSearchTerm}
+            setSearchTerm={setPackagingSearchTerm}
+            filter={packagingFilter}
+            setFilter={setPackagingFilter}
+            filterOptions={[
+              { value: 'all', label: 'All' },
+              { value: 'BOX', label: 'Boxes' },
+              { value: 'MAILER', label: 'Mailers' }
+            ]}
+            searchPlaceholder="Search packaging by name..."
+          />
+
+              <PackagingList items={filteredPackagingItems}  onDelete={handlePackagingDelete} />
 
                <div className="mt-6 border-t pt-6">
                 <label 
@@ -348,18 +415,8 @@ const handleFillerCsvImport = (file) => {
       </main>
 
       <EditProductModal isOpen={isEditModalOpen} onClose={handleCloseEditModal} product={productToEdit} onProductUpdated={fetchAllData} />
-       {/* <RecommendationModal 
-        isOpen={isRecommendationModalOpen}
-        onClose={() => setIsRecommendationModalOpen(false)}
-        results={recommendationResult}
-      /> */}
-       <RecommendationModal 
-        isOpen={isRecommendationModalOpen}
-        onClose={() => setIsRecommendationModalOpen(false)}
-        results={recommendationResult}
-        fromAddress={fromAddress}
-        toAddress={toAddress}
-      />
+       
+       <RecommendationModal isOpen={isRecommendationModalOpen} onClose={() => setIsRecommendationModalOpen(false)} results={recommendationResult} fromAddress={fromAddress} toAddress={toAddress} />
     </div>
   );
 }

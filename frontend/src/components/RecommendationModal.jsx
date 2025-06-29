@@ -3,26 +3,28 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import Visualization from './Visualization';
 
 function RecommendationModal({ isOpen, onClose, results, fromAddress, toAddress }) {
   const [rates, setRates] = useState([]);
   const [isLoadingRates, setIsLoadingRates] = useState(false);
   const [error, setError] = useState(null);
   const [selectedPackageIndex, setSelectedPackageIndex] = useState(null);
+  const [view, setView] = useState('rates');
   const { api } = useAuth();
 
-  // Reset state whenever the modal is closed
   useEffect(() => {
     if (!isOpen) {
       setRates([]);
       setIsLoadingRates(false);
       setError(null);
       setSelectedPackageIndex(null);
+      setView('rates'); 
     }
   }, [isOpen]);
 
   const fetchShippingRates = async (pkg, index) => {
-    setSelectedPackageIndex(index); // Keep track of which button was clicked
+    setSelectedPackageIndex(index); 
     setIsLoadingRates(true);
     setError(null);
     setRates([]);
@@ -46,6 +48,8 @@ function RecommendationModal({ isOpen, onClose, results, fromAddress, toAddress 
   }
   
   const allProducts = results.cart;
+   const selectedShipmentFor3D = results.recommendedPackages[selectedPackageIndex || 0];
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4">
@@ -55,8 +59,25 @@ function RecommendationModal({ isOpen, onClose, results, fromAddress, toAddress 
           <button onClick={onClose} className="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
         </div>
 
+        <div className="flex border-b mb-4">
+            <button
+                onClick={() => setView('rates')}
+                className={`py-2 px-4 font-semibold ${view === 'rates' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500'}`}
+            >
+                Shipping Rates
+            </button>
+            <button
+                onClick={() => setView('3d')}
+                className={`py-2 px-4 font-semibold ${view === '3d' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500'}`}
+            >
+                3D View
+            </button>
+        </div>
+
+      {view === 'rates' ? (
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Left Column: Packing Details */}
+          
           <div className="space-y-4">
             <h3 className="text-xl font-semibold text-gray-800">1. Your Packages</h3>
             {results.recommendedPackages.map((shipment, index) => {
@@ -79,14 +100,8 @@ function RecommendationModal({ isOpen, onClose, results, fromAddress, toAddress 
                 </button>
               </div>
             )})}
-            {/* Filler Info */}
-            {results.recommendedFillers && results.recommendedFillers.length > 0 && (
-              <div className="mt-4 border-t pt-4">
-                <h4 className="text-lg font-semibold text-green-700">Protective Filler Needed</h4>
-                <p>Recommended: <span className="font-bold">{results.recommendedFillers[0].name}</span></p>
-                <p>Amount: Fill <span className="font-bold">{results.voidFillVolume.toFixed(2)} cm³</span> of space.</p>
-              </div>
-            )}
+            
+            
           </div>
 
           
@@ -111,6 +126,16 @@ function RecommendationModal({ isOpen, onClose, results, fromAddress, toAddress 
             )}
           </div>
         </div>
+      ):(
+         
+          <div>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                  3D View for: {selectedShipmentFor3D.packaging.name}
+              </h3>
+              
+              <Visualization shipment={selectedShipmentFor3D} />
+          </div>
+        )}
 
         <div className="mt-6 flex justify-end">
           <button onClick={onClose} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 font-semibold">

@@ -14,6 +14,7 @@ function PackagingForm({ onPackagingCreated }) {
   const [maxWeight, setMaxWeight] = useState(''); 
   const [cost, setCost] = useState(''); 
     const [packagingWeight, setPackagingWeight] = useState(''); 
+    const [quantity, setQuantity] = useState('');
 
   const handleSubmit = async (event) => { 
     event.preventDefault(); 
@@ -26,33 +27,35 @@ function PackagingForm({ onPackagingCreated }) {
       maxWeight: parseFloat(maxWeight),
       cost: parseFloat(cost), 
       packagingWeight: parseFloat(packagingWeight), 
+       quantity: parseInt(quantity, 10),
     };
     
     try {
       await api.post('/packaging', packagingData);
       toast.success('Packaging created successfully!');
-      setName(''); setType('BOX'); setLength(''); setWidth(''); setHeight(''); setMaxWeight(''); setCost('');setPackagingWeight(''); 
+      setName(''); setType('BOX'); setLength(''); setWidth(''); setHeight(''); setMaxWeight(''); setCost('');setPackagingWeight(''); setQuantity('');
       onPackagingCreated();
+       
     } catch (error) {
-      // --- START: ENHANCED ERROR LOGGING ---
+      
       console.error("Detailed error creating packaging:", error);
 
       if (error.response) {
-        // The request was made and the server responded with an error (e.g., 400, 500)
+       
         console.error("Backend Response Data:", error.response.data);
         const serverMessage = error.response.data?.message || 'An unknown server error occurred.';
         const details = error.response.data?.details ? JSON.stringify(error.response.data.details) : '';
         toast.error(`Error: ${serverMessage} ${details}`);
       } else if (error.request) {
-        // The request was made but no response was received (e.g., network error, wrong port)
+        
         console.error("No response received from server. Is the backend running on port 8890?", error.request);
         toast.error('Failed to connect to the server. Please ensure the backend is running.');
       } else {
-        // Something happened in setting up the request
+       
         console.error('Error setting up the request:', error.message);
         toast.error('A frontend error occurred before the request was sent.');
       }
-      // --- END: ENHANCED ERROR LOGGING ---
+      
     }
   };
 
@@ -125,12 +128,20 @@ function PackagingForm({ onPackagingCreated }) {
         <input
   type="number"
   step="any"
-  value={packagingWeight} // You'll need to add a state for this: const [packagingWeight, setPackagingWeight] = useState('');
+  value={packagingWeight} 
   onChange={(e) => setPackagingWeight(e.target.value)}
   placeholder="Packaging Weight (kg)"
   required
   className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none"
 />
+<input
+        type="number"
+        value={quantity}
+        onChange={(e) => setQuantity(e.target.value)}
+        placeholder="Stock Quantity"
+        required
+        className="w-full p-2 border border-gray-300 rounded-md"
+      />
       </div>
       
       <button

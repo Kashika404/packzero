@@ -1,6 +1,6 @@
 import React from 'react';
 
-// This is a reusable UI block for a single address (from or to)
+
 const AddressBlock = ({ address, setAddress, title }) => (
   <div className="space-y-3">
     <h3 className="text-lg font-semibold text-gray-700">{title}</h3>

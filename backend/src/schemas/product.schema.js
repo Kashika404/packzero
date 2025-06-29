@@ -8,6 +8,7 @@ const createProductSchema = z.object({
   height: z.number().positive(),
   weight: z.number().positive(),
   isFragile: z.boolean().optional(),
+  quantity: z.number().int().min(0),
 });
 
 module.exports = { createProductSchema };

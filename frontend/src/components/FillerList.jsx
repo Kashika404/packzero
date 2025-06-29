@@ -1,22 +1,4 @@
-// // frontend/src/components/FillerList.jsx
-// import React from 'react';
 
-// function FillerList({ items, onDelete }) {
-//   return (
-//     <div className="product-list">
-//       {items.map(item => (
-//         <div key={item.id} className="product-item">
-//           <span>{item.name}</span>
-//           <button className="delete-btn" onClick={() => onDelete(item.id)}>Delete</button>
-//         </div>
-//       ))}
-//     </div>
-//   );
-// }
-
-// export default FillerList;
-
-// frontend/src/components/FillerList.jsx
 import React from 'react';
 
 function FillerList({ items, onDelete }) {

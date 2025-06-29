@@ -14,7 +14,7 @@ function Login() {
     e.preventDefault();
     try {
       await login(email, password);
-      navigate('/'); // Redirect to dashboard on successful login
+      navigate('/'); 
     } catch (error) {
       toast.error(error.response?.data?.message || "Login failed.");
     }
