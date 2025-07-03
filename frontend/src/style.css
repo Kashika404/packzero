@@ -1,0 +1,9 @@
+/* style.css */
+.content-style {
+  background: #202020;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-family: sans-serif;
+  user-select: none; /* Prevents text selection on hover */
+}

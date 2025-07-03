@@ -11,12 +11,17 @@ import EditProductModal from './components/EditProductModal';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useAuth } from './context/AuthContext';
+import Joyride, { STATUS } from 'react-joyride';
 import RecommendationModal from './components/RecommendationModal';
-import { Link } from 'react-router-dom'; 
+import { Link, useNavigate} from 'react-router-dom'; 
 import FilterControls from './components/FilterControls';
+import CommandCenter from './components/CommandCenter';
+import './style.css'; 
+
 
 function App() {
   const [products, setProducts] = useState([]);
+   const navigate = useNavigate();
   const [packagingItems, setPackagingItems] = useState([]);
   const [fillers, setFillers] = useState([]);
   const [cart, setCart] = useState([]);
@@ -33,6 +38,46 @@ function App() {
 
    const [fromAddress, setFromAddress] = useState({ name: "Shawn Ippotle", street1: "215 Clayton St.", city: "San Francisco", state: "CA", zip: "94117", country: "US", email: "shippotest.from@goshippo.com" });
   const [toAddress, setToAddress] = useState({ name: "Mr Hippo", street1: "965 Mission St #572", city: "San Francisco", state: "CA", zip: "94103", country: "US", email: "shippotest.to@goshippo.com" });
+    const [runTour, setRunTour] = useState(false);
+  const [tourSteps, setTourSteps] = useState([
+    {
+      target: '#product-inventory',
+      content: 'This is your Product Inventory. All of your items will be listed here.',
+      placement: 'bottom',
+    },
+    {
+      target: '#add-product-form',
+      content: 'You can add new products to your inventory using this form.',
+      placement: 'bottom',
+    },
+    {
+      target: '#cart-section',
+      content: 'After adding products to your cart, they will appear here.',
+      placement: 'bottom',
+    },
+    {
+      target: '#recommend-button',
+      content: 'Once you have items in your cart, click this button to get the best packaging recommendation!',
+      placement: 'top',
+    },
+  ]);
+ useEffect(() => {
+    const tourHasBeenSeen = localStorage.getItem('packzero_tour_complete');
+    if (!tourHasBeenSeen) {
+      setRunTour(true);
+    }
+  }, []);
+  
+  // --- NEW: Callback to handle tour completion/skipping ---
+  const handleJoyrideCallback = (data) => {
+    const { status } = data;
+    const finishedStatuses = [STATUS.FINISHED, STATUS.SKIPPED];
+
+    if (finishedStatuses.includes(status)) {
+      setRunTour(false);
+      localStorage.setItem('packzero_tour_complete', 'true');
+    }
+  };
 
   const API_URL = 'http://localhost:8888/api';
 
@@ -163,6 +208,7 @@ useEffect(() => {
       toast.warn("Please add items to the cart first.");
       return;
     }
+   
     try {
      
       const productIds = cart.map(p => p.id);
@@ -180,6 +226,7 @@ useEffect(() => {
       
       toast.error(`Could not get recommendation: ${error.response?.data?.message || "An error occurred."}`);
     }
+     navigate('/checkout', { state: { cart } });
   };
 
   const handlePackagingCsvImport = (file) => {
@@ -254,6 +301,20 @@ const handleFillerCsvImport = (file) => {
 
   return (
     <div className="bg-gray-50 min-h-screen font-sans">
+         <Joyride
+        steps={tourSteps}
+        run={runTour}
+        callback={handleJoyrideCallback}
+        continuous
+        showProgress
+        showSkipButton
+        styles={{
+          options: {
+            primaryColor: '#0d6efd', 
+            zIndex: 10000,
+          },
+        }}
+      />
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop={false} closeOnClick />
      
 
@@ -276,9 +337,10 @@ const handleFillerCsvImport = (file) => {
       </header>
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <CommandCenter />
         <section className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-md shadow-lg mb-8">
           <h2 className="text-2xl font-semibold mb-4">Order Recommendation</h2>
-          <div className="bg-white p-4 rounded-lg">
+          <div id="cart-section" className="bg-white p-4 rounded-lg">
             <strong className="block mb-2 text-gray-800">Cart Items:</strong>
             {cart.length > 0 ? (
            
@@ -301,7 +363,7 @@ const handleFillerCsvImport = (file) => {
             ) : (
               <p className="text-gray-500">Click "Add to Cart" on a product below.</p>
             )}
-             <button onClick={getRecommendation} className="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed" disabled={cart.length === 0}>
+             <button id="recommend-button" onClick={getRecommendation} className="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed" disabled={cart.length === 0}>
               Get Best Packaging
             </button>
           </div>
@@ -320,7 +382,8 @@ const handleFillerCsvImport = (file) => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white p-6 rounded-lg shadow-md">
+            
+             <div id="product-inventory" className="bg-white p-6 rounded-lg shadow-md">
               <h2 className="text-2xl font-semibold mb-4 text-gray-800">Product Inventory</h2>
                <FilterControls
             searchTerm={productSearchTerm}
@@ -336,7 +399,7 @@ const handleFillerCsvImport = (file) => {
           />
               <ProductList products={filteredProducts} onDelete={handleProductDelete} onAddToCart={addToCart} onEdit={handleOpenEditModal} />
               <hr className="my-6"/>
-              <h3 className="text-xl font-semibold mb-3 text-gray-700">Add a New Product</h3>
+              <h3 id="add-product-form" className="text-xl font-semibold mb-3 text-gray-700">Add a New Product</h3>
          
               <ProductForm onProductSubmit={handleProductCreate} />
             </div>
@@ -413,6 +476,9 @@ const handleFillerCsvImport = (file) => {
           </div>
         </div>
       </main>
+      <button id="recommend-button" onClick={getRecommendation} className="..." disabled={cart.length === 0}>
+          Proceed to Checkout
+      </button>
 
       <EditProductModal isOpen={isEditModalOpen} onClose={handleCloseEditModal} product={productToEdit} onProductUpdated={fetchAllData} />
        

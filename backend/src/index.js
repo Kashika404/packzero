@@ -8,10 +8,6 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 
-
-
-
-
 const dotenv = require('dotenv');
 dotenv.config();
 const { Shippo } = require('shippo');
@@ -21,10 +17,6 @@ const shippo = new Shippo({ apiKeyHeader: process.env.SHIPPO_API_KEY });
 const { createProductSchema } = require('./schemas/product.schema');
 const { createPackagingSchema } = require('./schemas/packaging.schema');
 const { createFillerSchema } = require('./schemas/filler.schema.js');
-
-
-
-
 
 
 console.log("--- ✅ SERVER SCRIPT STARTED ---");
@@ -103,16 +95,16 @@ app.post('/api/user/change-password', authenticateToken, async (req, res) => {
     try {
         const user = await prisma.user.findUnique({ where: { id: userId } });
 
-        // Check if the provided current password is correct
+       
         const isPasswordCorrect = await bcrypt.compare(currentPassword, user.password);
         if (!isPasswordCorrect) {
             return res.status(401).json({ message: "Incorrect current password." });
         }
 
-        // Hash the new password before saving it
+        
         const hashedNewPassword = await bcrypt.hash(newPassword, 10);
 
-        // Update the user's password in the database
+      
         await prisma.user.update({
             where: { id: userId },
             data: { password: hashedNewPassword },
@@ -280,204 +272,802 @@ app.delete('/api/fillers/:id', authenticateToken, async (req, res) => {
 });
 
 
+
+// app.post('/api/recommend', authenticateToken, async (req, res) => {
+//     const { productIds } = req.body;
+//     if (!productIds || productIds.length === 0) {
+//         return res.status(400).json({ message: "No products selected." });
+//     }
+
+//     try {
+//         const userId = req.user.userId;
+//         const productsInOrder = await prisma.product.findMany({
+//             where: { id: { in: productIds }, userId: userId }
+//         });
+
+//         if (productsInOrder.length !== productIds.length) {
+//             return res.status(404).json({ message: "One or more products not found." });
+//         }
+
+//         const allPackaging = await prisma.packaging.findMany({ where: { userId } });
+//         const isOrderFragile = productsInOrder.some(p => p.isFragile);
+//         const totalWeight = productsInOrder.reduce((sum, p) => sum + p.weight, 0);
+
+//         const itemsToPack = productsInOrder.map(p => new Item(p.name, p.width, p.height, p.length, p.weight));
+
+//         let suitableSinglePackages = [];
+//         for (const pkg of allPackaging) {
+//             if (pkg.maxWeight < totalWeight) continue;
+//             if (isOrderFragile && pkg.type === 'MAILER') continue;
+
+//             const packer = new Packer();
+//             packer.addBin(new Bin(pkg.name, pkg.width, pkg.height, pkg.length, pkg.maxWeight));
+//             itemsToPack.forEach(item => packer.addItem(item));
+//             packer.pack();
+
+//             if (packer.unfitItems.length === 0) {
+//                 const packedItems = packer.bins[0].items.map(packedItem => {
+//                     const originalProduct = productsInOrder.find(p => p.name === packedItem.name);
+//                     return { ...originalProduct, position: packedItem.position, rotationType: packedItem.rotationType, width: packedItem.width, height: packedItem.height, depth: packedItem.depth };
+//                 });
+//                 suitableSinglePackages.push({ packaging: pkg, packedItems });
+//             }
+//         }
+
+//         if (suitableSinglePackages.length > 0) {
+//             const bestPackageData = suitableSinglePackages.sort((a, b) => a.packaging.cost - b.packaging.cost)[0];
+//             const bestPackage = bestPackageData.packaging;
+
+//             let volumeSaved = 0, costSaved = 0, co2Saved = 0;
+//             if (suitableSinglePackages.length > 1) {
+//                 const sortedByVolume = suitableSinglePackages.sort((a, b) => 
+//                     (a.packaging.length * a.packaging.width * a.packaging.height) - 
+//                     (b.packaging.length * b.packaging.width * b.packaging.height)
+//                 );
+//                 const bestPackageIndex = sortedByVolume.findIndex(p => p.packaging.id === bestPackage.id);
+
+//                 // --- THIS IS THE CRITICAL FIX ---
+//                 // We must check that there is a package at the next index before trying to access it.
+//                 if (bestPackageIndex < sortedByVolume.length - 1) {
+//                     const wastefulPackageData = sortedByVolume[bestPackageIndex + 1];
+//                     const wastefulPackage = wastefulPackageData.packaging;
+                    
+//                     volumeSaved = (wastefulPackage.length * wastefulPackage.width * wastefulPackage.height) - (bestPackage.length * bestPackage.width * bestPackage.height);
+//                     costSaved = wastefulPackage.cost - bestPackage.cost;
+                    
+//                     const CO2_FACTOR = 0.9;
+//                     const weightSaved = wastefulPackage.packagingWeight - bestPackage.packagingWeight;
+//                     if (weightSaved > 0) {
+//                         co2Saved = weightSaved * CO2_FACTOR;
+//                     }
+//                 }
+//             }
+
+//             await prisma.shipment.create({
+//                 data: {
+//                     userId,
+//                     recommendedPackagingId: bestPackage.id,
+//                     products: { connect: productIds.map(id => ({ id })) },
+//                     volumeSaved: parseFloat(volumeSaved.toFixed(2)),
+//                     costSaved: parseFloat(costSaved.toFixed(2)),
+//                     co2Saved: parseFloat(co2Saved.toFixed(2))
+//                 }
+//             });
+
+            
+//              let recommendedFillers = [];
+//             let voidFillVolume = 0;
+//             if (isOrderFragile) {
+//                 const availableFillers = await prisma.protectiveFiller.findMany({ where: { userId } });
+//                 if (availableFillers.length > 0) {
+//                     recommendedFillers.push(availableFillers[0]);
+//                     const totalProductVolume = productsInOrder.reduce((sum, p) => sum + (p.length * p.width * p.height), 0);
+//                     const packageVolume = bestPackage.length * bestPackage.width * bestPackage.height;
+//                     voidFillVolume = packageVolume - totalProductVolume;
+//                 }
+//             }
+            
+//             const finalRecommendation = { ...bestPackageData, containedProductIds: productIds };
+
+//             // The 'recommendedFillers' and 'voidFillVolume' are now included in the final JSON response.
+//             return res.status(200).json({
+//                 recommendedPackages: [finalRecommendation],
+//                 recommendedFillers,
+//                 voidFillVolume,
+//             });
+
+//         }
+
+      
+//         return res.status(404).json({ message: "No single packaging found for all items." });
+
+//     } catch (error) {
+//         console.error("Recommendation engine error:", error);
+//         res.status(500).json({ message: "An error occurred in the recommendation engine." });
+//     }
+// });
+
+// backend/src/index.js
+
+// app.post('/api/recommend', authenticateToken, async (req, res) => {
+//     const { productIds, packagingPreference } = req.body;
+//     if (!productIds || productIds.length === 0) {
+//         return res.status(400).json({ message: "No products selected." });
+//     }
+
+//     try {
+//         const userId = req.user.userId;
+//         const productsInOrder = await prisma.product.findMany({
+//             where: { id: { in: productIds }, userId: userId }
+//         });
+
+//         if (productsInOrder.length !== productIds.length) {
+//             return res.status(404).json({ message: "One or more products not found." });
+//         }
+
+//         const allPackaging = await prisma.packaging.findMany({ where: { userId } });
+//         const isOrderFragile = productsInOrder.some(p => p.isFragile);
+//         const totalWeight = productsInOrder.reduce((sum, p) => sum + p.weight, 0);
+
+//         const itemsToPack = productsInOrder.map(p => new Item(p.name, p.width, p.height, p.length, p.weight));
+
+//         let finalRecommendedPackages = [];
+
+       
+//         if (packagingPreference !== 'eco') {
+//             let suitableSinglePackages = [];
+//             for (const pkg of allPackaging) {
+//                 if (pkg.maxWeight < totalWeight) continue;
+//                 if (isOrderFragile && pkg.type === 'MAILER') continue;
+
+//                 const packer = new Packer();
+//                 packer.addBin(new Bin(pkg.name, pkg.width, pkg.height, pkg.length, pkg.maxWeight));
+                
+//                 // Correctly add items to the packer
+//                 itemsToPack.forEach(item => packer.addItem(item));
+                
+//                 packer.pack();
+
+//                 if (packer.unfitItems.length === 0) {
+//                     const packedItems = packer.bins[0].items.map(packedItem => {
+//                         const originalProduct = productsInOrder.find(p => p.name === packedItem.name);
+//                         return { ...originalProduct, position: packedItem.position, rotationType: packedItem.rotationType, width: packedItem.width, height: packedItem.height, depth: packedItem.depth };
+//                     });
+//                     suitableSinglePackages.push({ packaging: pkg, packedItems, containedProductIds: productIds });
+//                 }
+//             }
+
+//             if (suitableSinglePackages.length > 0) {
+//                 const bestPackageData = suitableSinglePackages.sort((a, b) => a.packaging.cost - b.packaging.cost)[0];
+//                 finalRecommendedPackages.push(bestPackageData);
+//             }
+//         }
+        
+      
+//         if (finalRecommendedPackages.length === 0) {
+//             console.log("Attempting multi-package packing...");
+//             let itemsToBePacked = [...itemsToPack];
+//             while(itemsToBePacked.length > 0) {
+//                 itemsToBePacked.sort((a, b) => b.getVolume() - a.getVolume());
+//                 const currentItem = itemsToBePacked[0];
+                
+//                 let bestFit = null;
+//                 for (const pkg of allPackaging) {
+//                     if (pkg.maxWeight < currentItem.weight) continue;
+//                     if (isOrderFragile && pkg.type === 'MAILER') continue;
+
+//                     const bin = new Bin(pkg.name, pkg.width, pkg.height, pkg.length, pkg.maxWeight);
+//                     if (bin.putItem(currentItem, [0,0,0])) {
+//                         if (!bestFit || (pkg.width * pkg.height * pkg.length < bestFit.width * bestFit.height * bestFit.length)) {
+//                             bestFit = pkg;
+//                         }
+//                     }
+//                 }
+
+//                 if (!bestFit) {
+//                     return res.status(404).json({ message: `No package found for item: ${currentItem.name}`});
+//                 }
+
+//                 const shipmentPacker = new Packer();
+//                 shipmentPacker.addBin(new Bin(bestFit.name, bestFit.width, bestFit.height, bestFit.length, bestFit.maxWeight));
+//                 itemsToBePacked.forEach(item => shipmentPacker.addItem(item));
+//                 shipmentPacker.pack();
+
+//                 const packedItemNames = new Set(shipmentPacker.bins[0].items.map(i => i.name));
+//                 const packedProducts = productsInOrder.filter(p => packedItemNames.has(p.name));
+                
+//                 finalRecommendedPackages.push({
+//                     packaging: bestFit,
+//                     packedItems: shipmentPacker.bins[0].items.map(pi => ({...productsInOrder.find(p => p.name === pi.name), position: pi.position, rotationType: pi.rotationType})),
+//                     containedProductIds: packedProducts.map(p => p.id)
+//                 });
+                
+//                 itemsToBePacked = itemsToBePacked.filter(item => !packedItemNames.has(item.name));
+//             }
+//         }
+
+//         // --- FINAL DATA PREPARATION ---
+//         if (finalRecommendedPackages.length === 0) {
+//             return res.status(404).json({ message: "No suitable packaging solution found." });
+//         }
+
+//         await prisma.shipment.create({
+//             data: { userId, products: { connect: productIds.map(id => ({ id })) } }
+//         });
+        
+//         let recommendedFillers = [];
+//         let voidFillVolume = 0;
+//         if (isOrderFragile) {
+//             const availableFillers = await prisma.protectiveFiller.findMany({ where: { userId } });
+//             if (availableFillers.length > 0) {
+//                 recommendedFillers.push(availableFillers[0]);
+//                 const totalProductVolume = productsInOrder.reduce((sum, p) => sum + (p.length * p.width * p.height), 0);
+//                 const totalPackageVolume = finalRecommendedPackages.reduce((sum, s) => sum + (s.packaging.length * s.packaging.width * s.packaging.height), 0);
+//                 voidFillVolume = totalPackageVolume - totalProductVolume;
+//             }
+//         }
+
+//         return res.status(200).json({
+//             recommendedPackages: finalRecommendedPackages,
+//             recommendedFillers,
+//             voidFillVolume,
+//         });
+
+//     } catch (error) {
+//         console.error("Recommendation engine error:", error);
+//         res.status(500).json({ message: "An error occurred in the recommendation engine." });
+//     }
+// });
+
+
+// app.post('/api/recommend', authenticateToken, async (req, res) => {
+//     const { productIds, packagingPreference } = req.body;
+//     if (!productIds || productIds.length === 0) {
+//         return res.status(400).json({ message: "No products selected." });
+//     }
+
+//     try {
+//         const userId = req.user.userId;
+//         const productsInOrder = await prisma.product.findMany({
+//             where: { id: { in: productIds }, userId: userId }
+//         });
+
+//         if (productsInOrder.length !== productIds.length) {
+//             return res.status(404).json({ message: "One or more products not found." });
+//         }
+
+//         const allPackaging = await prisma.packaging.findMany({ where: { userId } });
+//         const isOrderFragile = productsInOrder.some(p => p.isFragile);
+//         const totalWeight = productsInOrder.reduce((sum, p) => sum + p.weight, 0);
+
+//         const itemsToPack = productsInOrder.map(p => new Item(p.name, p.width, p.height, p.length, p.weight));
+
+//         let finalRecommendedPackages = [];
+
+//         // --- SINGLE-PACKAGE LOGIC ---
+//         if (packagingPreference !== 'eco') {
+//             let suitableSinglePackages = [];
+//             for (const pkg of allPackaging) {
+//                 if (pkg.maxWeight < totalWeight) continue;
+//                 if (isOrderFragile && pkg.type === 'MAILER') continue;
+
+//                 const packer = new Packer();
+//                 packer.addBin(new Bin(pkg.name, pkg.width, pkg.height, pkg.length, pkg.maxWeight));
+                
+//                 // Correctly add items to the packer
+//                 itemsToPack.forEach(item => packer.addItem(item));
+                
+//                 packer.pack();
+
+//                 if (packer.unfitItems.length === 0) {
+//                     const packedItems = packer.bins[0].items.map(packedItem => {
+//                         const originalProduct = productsInOrder.find(p => p.name === packedItem.name);
+//                         return { ...originalProduct, position: packedItem.position, rotationType: packedItem.rotationType, width: packedItem.width, height: packedItem.height, depth: packedItem.depth };
+//                     });
+//                     suitableSinglePackages.push({ packaging: pkg, packedItems, containedProductIds: productIds });
+//                 }
+//             }
+
+//             if (suitableSinglePackages.length > 0) {
+//                 const bestPackageData = suitableSinglePackages.sort((a, b) => a.packaging.cost - b.packaging.cost)[0];
+//                 finalRecommendedPackages.push(bestPackageData);
+//             }
+//         }
+        
+//         // --- MULTI-PACKAGE LOGIC ---
+//         if (finalRecommendedPackages.length === 0) {
+//             console.log("Attempting multi-package packing...");
+//             let itemsToBePacked = [...itemsToPack];
+//             while(itemsToBePacked.length > 0) {
+//                 itemsToBePacked.sort((a, b) => b.getVolume() - a.getVolume());
+//                 const currentItem = itemsToBePacked[0];
+                
+//                 let bestFit = null;
+//                 for (const pkg of allPackaging) {
+//                     if (pkg.maxWeight < currentItem.weight) continue;
+//                     if (isOrderFragile && pkg.type === 'MAILER') continue;
+
+//                     const bin = new Bin(pkg.name, pkg.width, pkg.height, pkg.length, pkg.maxWeight);
+//                     if (bin.putItem(currentItem, [0,0,0])) {
+//                         if (!bestFit || (pkg.width * pkg.height * pkg.length < bestFit.width * bestFit.height * bestFit.length)) {
+//                             bestFit = pkg;
+//                         }
+//                     }
+//                 }
+
+//                 if (!bestFit) {
+//                     return res.status(404).json({ message: `No package found for item: ${currentItem.name}`});
+//                 }
+
+//                 const shipmentPacker = new Packer();
+//                 shipmentPacker.addBin(new Bin(bestFit.name, bestFit.width, bestFit.height, bestFit.length, bestFit.maxWeight));
+//                 itemsToBePacked.forEach(item => shipmentPacker.addItem(item));
+//                 shipmentPacker.pack();
+
+//                 const packedItemNames = new Set(shipmentPacker.bins[0].items.map(i => i.name));
+//                 const packedProducts = productsInOrder.filter(p => packedItemNames.has(p.name));
+                
+//                 const packedItemsData = shipmentPacker.bins[0].items.map(pi => {
+//                     const originalProduct = productsInOrder.find(p => p.name === pi.name);
+//                     return {...originalProduct, position: pi.position, rotationType: pi.rotationType, width: pi.width, height: pi.height, depth: pi.depth };
+//                 });
+
+//                 finalRecommendedPackages.push({
+//                     packaging: bestFit,
+//                     packedItems: packedItemsData,
+//                     containedProductIds: packedProducts.map(p => p.id)
+//                 });
+                
+//                 itemsToBePacked = itemsToBePacked.filter(item => !packedItemNames.has(item.name));
+//             }
+//         }
+
+//         // --- FINAL DATA PREPARATION ---
+//         if (finalRecommendedPackages.length === 0) {
+//             return res.status(404).json({ message: "No suitable packaging solution found." });
+//         }
+
+//         await prisma.shipment.create({
+//             data: { userId, products: { connect: productIds.map(id => ({ id })) } }
+//         });
+        
+//         let recommendedFillers = [];
+//         let voidFillVolume = 0;
+//         if (isOrderFragile) {
+//             const availableFillers = await prisma.protectiveFiller.findMany({ where: { userId } });
+//             if (availableFillers.length > 0) {
+//                 recommendedFillers.push(availableFillers[0]);
+//                 const totalProductVolume = productsInOrder.reduce((sum, p) => sum + (p.length * p.width * p.height), 0);
+//                 const totalPackageVolume = finalRecommendedPackages.reduce((sum, s) => sum + (s.packaging.length * s.packaging.width * s.packaging.height), 0);
+//                 voidFillVolume = totalPackageVolume - totalProductVolume;
+//             }
+//         }
+
+//         return res.status(200).json({
+//             recommendedPackages: finalRecommendedPackages,
+//             recommendedFillers,
+//             voidFillVolume,
+//         });
+
+//     } catch (error) {
+//         console.error("Recommendation engine error:", error);
+//         res.status(500).json({ message: "An error occurred in the recommendation engine." });
+//     }
+// });
+
+// app.post('/api/recommend', authenticateToken, async (req, res) => {
+//     const { productIds, packagingPreference } = req.body;
+//     if (!productIds || productIds.length === 0) {
+//         return res.status(400).json({ message: "No products selected." });
+//     }
+
+//     try {
+//         const userId = req.user.userId;
+//         const productsInOrder = await prisma.product.findMany({
+//             where: { id: { in: productIds }, userId: userId }
+//         });
+
+//         if (productsInOrder.length !== productIds.length) {
+//             return res.status(404).json({ message: "One or more products not found." });
+//         }
+
+//         const allPackaging = await prisma.packaging.findMany({ where: { userId } });
+//         const isOrderFragile = productsInOrder.some(p => p.isFragile);
+//         const totalWeight = productsInOrder.reduce((sum, p) => sum + p.weight, 0);
+
+//         const itemsToPack = productsInOrder.map(p => new Item(p.name, p.width, p.height, p.length, p.weight));
+
+//         let finalRecommendedPackages = [];
+
+//         // --- SINGLE-PACKAGE LOGIC ---
+//         if (packagingPreference !== 'eco') {
+//             let suitableSinglePackages = [];
+//             for (const pkg of allPackaging) {
+//                 if (pkg.maxWeight < totalWeight) continue;
+//                 if (isOrderFragile && pkg.type === 'MAILER') continue;
+
+//                 const packer = new Packer();
+//                 packer.addBin(new Bin(pkg.name, pkg.width, pkg.height, pkg.length, pkg.maxWeight));
+                
+//                 // Correctly add items to the packer
+//                 itemsToPack.forEach(item => packer.addItem(item));
+                
+//                 packer.pack();
+
+//                 if (packer.unfitItems.length === 0) {
+//                     const packedItems = packer.bins[0].items.map(packedItem => {
+//                         const originalProduct = productsInOrder.find(p => p.name === packedItem.name);
+//                         return { ...originalProduct, position: packedItem.position, rotationType: packedItem.rotationType, width: packedItem.width, height: packedItem.height, depth: packedItem.depth };
+//                     });
+//                     suitableSinglePackages.push({ packaging: pkg, packedItems, containedProductIds: productIds });
+//                 }
+//             }
+
+//             if (suitableSinglePackages.length > 0) {
+//                 const bestPackageData = suitableSinglePackages.sort((a, b) => a.packaging.cost - b.packaging.cost)[0];
+//                 finalRecommendedPackages.push(bestPackageData);
+//             }
+//         }
+        
+//         // --- MULTI-PACKAGE LOGIC ---
+//         if (finalRecommendedPackages.length === 0) {
+//             console.log("Attempting multi-package packing...");
+//             let itemsToBePacked = [...itemsToPack];
+//             while(itemsToBePacked.length > 0) {
+//                 itemsToBePacked.sort((a, b) => b.getVolume() - a.getVolume());
+//                 const currentItem = itemsToBePacked[0];
+                
+//                 let bestFit = null;
+//                 for (const pkg of allPackaging) {
+//                     if (pkg.maxWeight < currentItem.weight) continue;
+//                     if (isOrderFragile && pkg.type === 'MAILER') continue;
+
+//                     const bin = new Bin(pkg.name, pkg.width, pkg.height, pkg.length, pkg.maxWeight);
+//                     if (bin.putItem(currentItem, [0,0,0])) {
+//                         if (!bestFit || (pkg.width * pkg.height * pkg.length < bestFit.width * bestFit.height * bestFit.length)) {
+//                             bestFit = pkg;
+//                         }
+//                     }
+//                 }
+
+//                 if (!bestFit) {
+//                     return res.status(404).json({ message: `No package found for item: ${currentItem.name}`});
+//                 }
+
+//                 const shipmentPacker = new Packer();
+//                 shipmentPacker.addBin(new Bin(bestFit.name, bestFit.width, bestFit.height, bestFit.length, bestFit.maxWeight));
+//                 itemsToBePacked.forEach(item => shipmentPacker.addItem(item));
+//                 shipmentPacker.pack();
+
+//                 const packedItemNames = new Set(shipmentPacker.bins[0].items.map(i => i.name));
+//                 const packedProducts = productsInOrder.filter(p => packedItemNames.has(p.name));
+                
+//                 const packedItemsData = shipmentPacker.bins[0].items.map(pi => {
+//                     const originalProduct = productsInOrder.find(p => p.name === pi.name);
+//                     return {...originalProduct, position: pi.position, rotationType: pi.rotationType, width: pi.width, height: pi.height, depth: pi.depth };
+//                 });
+
+//                 finalRecommendedPackages.push({
+//                     packaging: bestFit,
+//                     packedItems: packedItemsData,
+//                     containedProductIds: packedProducts.map(p => p.id)
+//                 });
+                
+//                 itemsToBePacked = itemsToBePacked.filter(item => !packedItemNames.has(item.name));
+//             }
+//         }
+
+//         // --- FINAL DATA PREPARATION ---
+//         if (finalRecommendedPackages.length === 0) {
+//             return res.status(404).json({ message: "No suitable packaging solution found." });
+//         }
+
+//         await prisma.shipment.create({
+//             data: { userId, products: { connect: productIds.map(id => ({ id })) } }
+//         });
+        
+//         let recommendedFillers = [];
+//         let voidFillVolume = 0;
+//         if (isOrderFragile) {
+//             const availableFillers = await prisma.protectiveFiller.findMany({ where: { userId } });
+//             if (availableFillers.length > 0) {
+//                 recommendedFillers.push(availableFillers[0]);
+//                 const totalProductVolume = productsInOrder.reduce((sum, p) => sum + (p.length * p.width * p.height), 0);
+//                 const totalPackageVolume = finalRecommendedPackages.reduce((sum, s) => sum + (s.packaging.length * s.packaging.width * s.packaging.height), 0);
+//                 voidFillVolume = totalPackageVolume - totalProductVolume;
+//             }
+//         }
+
+//         return res.status(200).json({
+//             recommendedPackages: finalRecommendedPackages,
+//             recommendedFillers,
+//             voidFillVolume,
+//         });
+
+//     } catch (error) {
+//         console.error("Recommendation engine error:", error);
+//         res.status(500).json({ message: "An error occurred in the recommendation engine." });
+//     }
+// });
+
+
+
+// app.post('/api/recommend', authenticateToken, async (req, res) => {
+//     const { productIds, packagingPreference } = req.body;
+//     if (!productIds || productIds.length === 0) {
+//         return res.status(400).json({ message: "No products selected." });
+//     }
+
+//     try {
+//         const userId = req.user.userId;
+//         const productsInOrder = await prisma.product.findMany({
+//             where: { id: { in: productIds }, userId: userId }
+//         });
+
+//         if (productsInOrder.length !== productIds.length) {
+//             return res.status(404).json({ message: "One or more products not found." });
+//         }
+
+//         const allPackaging = await prisma.packaging.findMany({ where: { userId } });
+//         const isOrderFragile = productsInOrder.some(p => p.isFragile);
+//         const totalWeight = productsInOrder.reduce((sum, p) => sum + p.weight, 0);
+
+//         // Create Item instances once. This is a critical step.
+//         const itemsToPack = productsInOrder.map(p => new Item(p.name, p.width, p.height, p.length, p.weight));
+
+//         let finalRecommendedPackages = [];
+
+//         // --- SINGLE-PACKAGE LOGIC ('standard' preference) ---
+//         if (packagingPreference !== 'eco') {
+//             let suitableSinglePackages = [];
+//             for (const pkg of allPackaging) {
+//                 if (pkg.maxWeight < totalWeight) continue;
+//                 if (isOrderFragile && pkg.type === 'MAILER') continue;
+
+//                 const packer = new Packer();
+//                 packer.addBin(new Bin(pkg.name, pkg.width, pkg.height, pkg.length, pkg.maxWeight));
+                
+//                 // *** THE DEFINITIVE FIX IS HERE ***
+//                 // We add the already-created items directly to the packer.
+//                 // We do NOT create `new Item()` again inside this loop.
+//                 itemsToPack.forEach(item => packer.addItem(item));
+                
+//                 packer.pack();
+
+//                 if (packer.unfitItems.length === 0) {
+//                     const packedItems = packer.bins[0].items.map(packedItem => {
+//                         const originalProduct = productsInOrder.find(p => p.name === packedItem.name);
+//                         return { ...originalProduct, position: packedItem.position, rotationType: packedItem.rotationType, width: packedItem.width, height: packedItem.height, depth: packedItem.depth };
+//                     });
+//                     suitableSinglePackages.push({ packaging: pkg, packedItems, containedProductIds: productIds });
+//                 }
+//             }
+
+//             if (suitableSinglePackages.length > 0) {
+//                 const bestPackageData = suitableSinglePackages.sort((a, b) => a.packaging.cost - b.packaging.cost)[0];
+//                 finalRecommendedPackages.push(bestPackageData);
+//             }
+//         }
+        
+//         // --- MULTI-PACKAGE LOGIC ('eco' preference or if single fails) ---
+//         if (finalRecommendedPackages.length === 0) {
+//             console.log("Attempting multi-package packing...");
+//             let itemsToBePacked = [...itemsToPack];
+//             while(itemsToBePacked.length > 0) {
+//                 itemsToBePacked.sort((a, b) => b.getVolume() - a.getVolume());
+//                 const currentItem = itemsToBePacked[0];
+                
+//                 let bestFit = null;
+//                 for (const pkg of allPackaging) {
+//                     if (pkg.maxWeight < currentItem.weight) continue;
+//                     if (isOrderFragile && pkg.type === 'MAILER') continue;
+
+//                     const bin = new Bin(pkg.name, pkg.width, pkg.height, pkg.length, pkg.maxWeight);
+//                     if (bin.putItem(currentItem, [0,0,0])) {
+//                         if (!bestFit || (pkg.width * pkg.height * pkg.length < bestFit.width * bestFit.height * bestFit.length)) {
+//                             bestFit = pkg;
+//                         }
+//                     }
+//                 }
+
+//                 if (!bestFit) {
+//                     return res.status(404).json({ message: `No package found for item: ${currentItem.name}`});
+//                 }
+
+//                 const shipmentPacker = new Packer();
+//                 shipmentPacker.addBin(new Bin(bestFit.name, bestFit.width, bestFit.height, bestFit.length, bestFit.maxWeight));
+                
+//                 // Also apply the fix here for the multi-package packer
+//                 itemsToBePacked.forEach(item => shipmentPacker.addItem(item));
+                
+//                 shipmentPacker.pack();
+
+//                 const packedItemNames = new Set(shipmentPacker.bins[0].items.map(i => i.name));
+//                 const packedProducts = productsInOrder.filter(p => packedItemNames.has(p.name));
+                
+//                 const packedItemsData = shipmentPacker.bins[0].items.map(pi => {
+//                     const originalProduct = productsInOrder.find(p => p.name === pi.name);
+//                     return {...originalProduct, position: pi.position, rotationType: pi.rotationType, width: pi.width, height: pi.height, depth: pi.depth };
+//                 });
+
+//                 finalRecommendedPackages.push({
+//                     packaging: bestFit,
+//                     packedItems: packedItemsData,
+//                     containedProductIds: packedProducts.map(p => p.id)
+//                 });
+                
+//                 itemsToBePacked = itemsToBePacked.filter(item => !packedItemNames.has(item.name));
+//             }
+//         }
+
+//         if (finalRecommendedPackages.length === 0) {
+//             return res.status(404).json({ message: "No suitable packaging solution found." });
+//         }
+
+//         await prisma.shipment.create({
+//             data: { userId, products: { connect: productIds.map(id => ({ id })) } }
+//         });
+        
+//         let recommendedFillers = [];
+//         let voidFillVolume = 0;
+//         if (isOrderFragile) {
+//             const availableFillers = await prisma.protectiveFiller.findMany({ where: { userId } });
+//             if (availableFillers.length > 0) {
+//                 recommendedFillers.push(availableFillers[0]);
+//                 const totalProductVolume = productsInOrder.reduce((sum, p) => sum + (p.length * p.width * p.height), 0);
+//                 const totalPackageVolume = finalRecommendedPackages.reduce((sum, s) => sum + (s.packaging.length * s.packaging.width * s.packaging.height), 0);
+//                 voidFillVolume = totalPackageVolume - totalProductVolume;
+//             }
+//         }
+
+//         return res.status(200).json({
+//             recommendedPackages: finalRecommendedPackages,
+//             recommendedFillers,
+//             voidFillVolume,
+//         });
+
+//     } catch (error) {
+//         console.error("Recommendation engine error:", error);
+//         res.status(500).json({ message: "An error occurred in the recommendation engine." });
+//     }
+// });
+
+
+
+
+
 app.post('/api/recommend', authenticateToken, async (req, res) => {
-    const { productIds } = req.body;
+    const { productIds, packagingPreference } = req.body;
     if (!productIds || productIds.length === 0) {
         return res.status(400).json({ message: "No products selected." });
     }
 
     try {
         const userId = req.user.userId;
-
-        const uniqueProductIds = [...new Set(productIds)];
-        const uniqueProductsFound = await prisma.product.findMany({
-            where: { id: { in: uniqueProductIds }, userId: userId }
+        const productsInOrder = await prisma.product.findMany({
+            where: { id: { in: productIds }, userId: userId }
         });
 
-        if (uniqueProductsFound.length !== uniqueProductIds.length) {
-            return res.status(404).json({ message: "One or more products not found in your inventory." });
+        if (productsInOrder.length !== productIds.length) {
+            return res.status(404).json({ message: "One or more products not found." });
         }
 
-        const productsInOrder = productIds.map(id => uniqueProductsFound.find(p => p.id === id));
         const allPackaging = await prisma.packaging.findMany({ where: { userId } });
         const isOrderFragile = productsInOrder.some(p => p.isFragile);
-        const totalWeight = productsInOrder.reduce((sum, p) => sum + (p.weight || 0), 0);
+        const totalWeight = productsInOrder.reduce((sum, p) => sum + p.weight, 0);
 
-        let itemsToPack = productsInOrder.map(p => new Item(p.name, p.width, p.height, p.length, p.weight, { id: p.id,original: p  }));
+        // Create Item instances once. This is a critical step.
+        const itemsToPack = productsInOrder.map(p => new Item(p.name, p.width, p.height, p.length, p.weight));
 
-        let suitableSinglePackages = [];
-        for (const pkg of allPackaging) {
-            if (pkg.maxWeight < totalWeight) continue;
-            if (isOrderFragile && pkg.type === 'MAILER') continue;
+        let finalRecommendedPackages = [];
 
-            const packer = new Packer();
-            packer.addBin(new Bin(pkg.name, pkg.width, pkg.height, pkg.length, pkg.maxWeight));
-            itemsToPack.forEach(item => packer.addItem(new Item(item.name, item.width, item.height, item.depth, item.weight, item.userData)));
-            
-            packer.pack();
-
-            if (packer.unfitItems.length === 0) {
-                // suitableSinglePackages.push(pkg);
-                // const packedItems = packer.bins[0].items.map(item => ({
-                //     ...item.userData.original,
-                //     position: item.position,
-                //     rotationType: item.rotationType,
-                //     width: item.width,
-                //     height: item.height,
-                //     depth: item.depth,
-                // }));
-                const packedItems = packer.bins[0].items.map(packedItem => {
-                    const originalProduct = productsInOrder.find(p => p.name === packedItem.name);
-                    return {
-                        ...originalProduct,
-                        position: packedItem.position,
-                        rotationType: packedItem.rotationType,
-                        // Use the dimensions from the packed item, as it might be rotated
-                        width: packedItem.width,
-                        height: packedItem.height,
-                        depth: packedItem.depth,
-                    };
-                });
-                suitableSinglePackages.push({ packaging: pkg, packedItems });
-
-            }
-        }
-
-        if (suitableSinglePackages.length > 0) {
-            // let bestPackage = suitableSinglePackages.sort((a, b) => a.cost - b.cost)[0];
-
-             const bestPackageData = suitableSinglePackages.sort((a, b) => a.packaging.cost - b.packaging.cost)[0];
-            const bestPackage = bestPackageData.packaging; 
-            let volumeSaved = 0, costSaved = 0, co2Saved = 0;
-            if (suitableSinglePackages.length > 1) {
-                // const sortedByVolume = suitableSinglePackages.sort((a, b) => (a.length * a.width * a.height) - (b.length * b.width * b.height));
-                // const bestPackageIndex = sortedByVolume.findIndex(p => p.id === bestPackage.id);
-                const sortedByVolume = suitableSinglePackages.sort((a, b) => 
-                    (a.packaging.length * a.packaging.width * a.packaging.height) - 
-                    (b.packaging.length * b.packaging.width * b.packaging.height)
-                );
-                // Correctly find the index using the packaging object
-                const bestPackageIndex = sortedByVolume.findIndex(p => p.packaging.id === bestPackage.id);
-                if (bestPackageIndex < sortedByVolume.length - 1) {
-                    const wastefulPackage = sortedByVolume[bestPackageIndex + 1];
-                    volumeSaved = (wastefulPackage.length * wastefulPackage.width * wastefulPackage.height) - (bestPackage.length * bestPackage.width * bestPackage.height);
-                    costSaved = wastefulPackage.cost - bestPackage.cost;
-                    const CO2_FACTOR = 0.9;
-                    const weightSaved = wastefulPackage.packagingWeight - bestPackage.packagingWeight;
-                    if (weightSaved > 0) {
-                        co2Saved = weightSaved * CO2_FACTOR;
-                    }
-                }
-            }
-
-            await prisma.shipment.create({
-                data: {
-                    userId: userId,
-                    recommendedPackagingId: bestPackage.id,
-                    products: { connect: productIds.map(id => ({ id: id })) },
-                    volumeSaved: parseFloat(volumeSaved.toFixed(2)),
-                    costSaved: parseFloat(costSaved.toFixed(2)),
-                    co2Saved: parseFloat(co2Saved.toFixed(2))
-                }
-            });
-
-            let recommendedFillers = [];
-            let voidFillVolume = 0; 
-            if (isOrderFragile) {
-                const availableFillers = await prisma.protectiveFiller.findMany({ where: { userId } });
-                if (availableFillers.length > 0) {
-                    recommendedFillers.push(availableFillers[0]);
-                    const totalProductVolume = productsInOrder.reduce((sum, p) => sum + (p.length * p.width * p.height), 0);
-                    const packageVolume = bestPackage.length * bestPackage.width * bestPackage.height;
-                    voidFillVolume = packageVolume - totalProductVolume;
-                }
-            }
-
-            // return res.status(200).json({
-            //     recommendedPackages: [{
-            //         packaging: bestPackage,
-            //         containedProductIds: productIds 
-            //     }],
-            //     recommendedFillers: recommendedFillers,
-            //     voidFillVolume: voidFillVolume
-            // });
-              const finalRecommendation = {
-                ...bestPackageData,
-                containedProductIds: productIds 
-            };
-            return res.status(200).json({
-                recommendedPackages: [finalRecommendation], // Send the object with packaging and packedItems
-                recommendedFillers,
-                voidFillVolume,
-            });
-        }
-
-        
-        console.log("Single package failed, attempting multi-package packing...");
-        let packedShipments = [];
-        let itemsToBePacked = [...itemsToPack];
-
-        while(itemsToBePacked.length > 0) {
-            itemsToBePacked.sort((a, b) => b.getVolume() - a.getVolume());
-            const currentItem = itemsToBePacked[0];
-            
-            let bestFit = null;
+        // --- SINGLE-PACKAGE LOGIC ('standard' preference) ---
+        if (packagingPreference !== 'eco') {
+            let suitableSinglePackages = [];
             for (const pkg of allPackaging) {
-                if (pkg.maxWeight < currentItem.weight) continue;
+                if (pkg.maxWeight < totalWeight) continue;
                 if (isOrderFragile && pkg.type === 'MAILER') continue;
 
-                const bin = new Bin(pkg.name, pkg.width, pkg.height, pkg.length, pkg.maxWeight);
-                if (bin.putItem(currentItem, [0,0,0])) {
-                    if (!bestFit || (pkg.width * pkg.height * pkg.length < bestFit.width * bestFit.height * bestFit.length)) {
-                        bestFit = pkg;
-                    }
+                const packer = new Packer();
+                packer.addBin(new Bin(pkg.name, pkg.width, pkg.height, pkg.length, pkg.maxWeight));
+                
+                // *** THE DEFINITIVE FIX IS HERE ***
+                // We add the already-created items directly to the packer.
+                // We do NOT create `new Item()` again inside this loop.
+                itemsToPack.forEach(item => packer.addItem(item));
+                
+                packer.pack();
+
+                if (packer.unfitItems.length === 0) {
+                    const packedItems = packer.bins[0].items.map(packedItem => {
+                        const originalProduct = productsInOrder.find(p => p.name === packedItem.name);
+                        return { ...originalProduct, position: packedItem.position, rotationType: packedItem.rotationType, width: packedItem.width, height: packedItem.height, depth: packedItem.depth };
+                    });
+                    suitableSinglePackages.push({ packaging: pkg, packedItems, containedProductIds: productIds });
                 }
             }
 
-            if (!bestFit) {
-                return res.status(404).json({ message: `No package found that can fit the item: ${currentItem.name}`});
+            if (suitableSinglePackages.length > 0) {
+                const bestPackageData = suitableSinglePackages.sort((a, b) => a.packaging.cost - b.packaging.cost)[0];
+                finalRecommendedPackages.push(bestPackageData);
             }
+        }
+        
+        // --- MULTI-PACKAGE LOGIC ('eco' preference or if single fails) ---
+        if (finalRecommendedPackages.length === 0) {
+            console.log("Attempting multi-package packing...");
+            let itemsToBePacked = [...itemsToPack];
+            while(itemsToBePacked.length > 0) {
+                itemsToBePacked.sort((a, b) => b.getVolume() - a.getVolume());
+                const currentItem = itemsToBePacked[0];
+                
+                let bestFit = null;
+                for (const pkg of allPackaging) {
+                    if (pkg.maxWeight < currentItem.weight) continue;
+                    if (isOrderFragile && pkg.type === 'MAILER') continue;
 
-            const shipmentPacker = new Packer();
-            shipmentPacker.addBin(new Bin(bestFit.name, bestFit.width, bestFit.height, bestFit.length, bestFit.maxWeight));
-            itemsToBePacked.forEach(item => shipmentPacker.addItem(item));
-            shipmentPacker.pack();
-            
-            const packedIds = new Set(shipmentPacker.bins[0].items.map(i => i.userData.id));
-            packedShipments.push({
-                packaging: bestFit,
-                containedProductIds: Array.from(packedIds)
-            });
+                    const bin = new Bin(pkg.name, pkg.width, pkg.height, pkg.length, pkg.maxWeight);
+                    if (bin.putItem(currentItem, [0,0,0])) {
+                        if (!bestFit || (pkg.width * pkg.height * pkg.length < bestFit.width * bestFit.height * bestFit.length)) {
+                            bestFit = pkg;
+                        }
+                    }
+                }
 
-            itemsToBePacked = itemsToBePacked.filter(item => !packedIds.has(item.userData.id));
+                if (!bestFit) {
+                    return res.status(404).json({ message: `No package found for item: ${currentItem.name}`});
+                }
+
+                const shipmentPacker = new Packer();
+                shipmentPacker.addBin(new Bin(bestFit.name, bestFit.width, bestFit.height, bestFit.length, bestFit.maxWeight));
+                
+                // Also apply the fix here for the multi-package packer
+                itemsToBePacked.forEach(item => shipmentPacker.addItem(item));
+                
+                shipmentPacker.pack();
+
+                const packedItemNames = new Set(shipmentPacker.bins[0].items.map(i => i.name));
+                const packedProducts = productsInOrder.filter(p => packedItemNames.has(p.name));
+                
+                const packedItemsData = shipmentPacker.bins[0].items.map(pi => {
+                    const originalProduct = productsInOrder.find(p => p.name === pi.name);
+                    return {...originalProduct, position: pi.position, rotationType: pi.rotationType, width: pi.width, height: pi.height, depth: pi.depth };
+                });
+
+                finalRecommendedPackages.push({
+                    packaging: bestFit,
+                    packedItems: packedItemsData,
+                    containedProductIds: packedProducts.map(p => p.id)
+                });
+                
+                itemsToBePacked = itemsToBePacked.filter(item => !packedItemNames.has(item.name));
+            }
+        }
+
+        if (finalRecommendedPackages.length === 0) {
+            return res.status(404).json({ message: "No suitable packaging solution found." });
         }
 
         await prisma.shipment.create({
-            data: {
-                userId: userId,
-                products: { connect: productIds.map(id => ({ id: id })) },
-                volumeSaved: 0, costSaved: 0, co2Saved: 0,
-            }
+            data: { userId, products: { connect: productIds.map(id => ({ id })) } }
         });
-
+        
         let recommendedFillers = [];
         let voidFillVolume = 0;
         if (isOrderFragile) {
             const availableFillers = await prisma.protectiveFiller.findMany({ where: { userId } });
-             console.log("Found Fillers for this user:", availableFillers);
             if (availableFillers.length > 0) {
                 recommendedFillers.push(availableFillers[0]);
-
                 const totalProductVolume = productsInOrder.reduce((sum, p) => sum + (p.length * p.width * p.height), 0);
-                const totalPackageVolume = packedShipments.reduce((sum, s) => sum + (s.packaging.length * s.packaging.width * s.packaging.height), 0);
+                const totalPackageVolume = finalRecommendedPackages.reduce((sum, s) => sum + (s.packaging.length * s.packaging.width * s.packaging.height), 0);
                 voidFillVolume = totalPackageVolume - totalProductVolume;
             }
         }
-      
-        res.status(200).json({
-            recommendedPackages: packedShipments,
-            recommendedFillers: recommendedFillers,
-            voidFillVolume: voidFillVolume
+
+        return res.status(200).json({
+            recommendedPackages: finalRecommendedPackages,
+            recommendedFillers,
+            voidFillVolume,
         });
 
     } catch (error) {

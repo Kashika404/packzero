@@ -11,6 +11,7 @@ import './index.css';
 import Analytics from './pages/Analytics.jsx';
 import ShipmentHistory from './pages/ShipmentHistory.jsx'; 
 import Settings from './pages/Settings.jsx';
+import Checkout from './pages/Checkout.jsx'; 
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -37,6 +38,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           />
            <Route path="/shipments" element={<ProtectedRoute><ShipmentHistory /></ProtectedRoute>} />
            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+           <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
